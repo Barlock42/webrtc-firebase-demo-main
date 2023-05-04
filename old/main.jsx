@@ -2,10 +2,9 @@ import './style.css';
 
 import firebase from 'firebase/app';
 import 'firebase/firestore';
+import firebaseConfig from './firebaseConfig';
 
-const firebaseConfig = {
-  // your config
-};
+import callModal from './callModal';
 
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
@@ -27,38 +26,56 @@ let localStream = null;
 let remoteStream = null;
 
 // HTML elements
-const webcamButton = document.getElementById('webcamButton');
-const webcamVideo = document.getElementById('webcamVideo');
-const callButton = document.getElementById('callButton');
-const callInput = document.getElementById('callInput');
-const answerButton = document.getElementById('answerButton');
-const remoteVideo = document.getElementById('remoteVideo');
-const hangupButton = document.getElementById('hangupButton');
+const startCallButton = document.getElementById('startCallButton');
+// const webcamVideo = document.getElementById('webcamVideo');
+// const callButton = document.getElementById('callButton');
+// const callInput = document.getElementById('callInput');
+// const answerButton = document.getElementById('answerButton');
+// const remoteVideo = document.getElementById('remoteVideo');
+// const hangupButton = document.getElementById('hangupButton');
+
+// Define a function to create a new window with hangup button
+function createHangupWindow() {
+  // Calculate the window dimensions based on screen size
+  const width = 600; // screen.width;
+  const height = 600; // screen.height;
+
+  // Open a new window with the calculated dimensions
+  const newWindow = window.open('', '', `width=${width},height=${height}`);
+
+  // Create a button element for hangup and append it to the new window's document
+  const hangupButton = document.createElement('button');
+  const callModal = document.createElement('callModal');
+  hangupButton.innerText = 'Hangup';
+  hangupButton.onclick = () => newWindow.close();
+  newWindow.document.body.appendChild(hangupButton);
+}
 
 // 1. Setup media sources
 
-webcamButton.onclick = async () => {
-  localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-  remoteStream = new MediaStream();
+startCallButton.onclick = async () => {
+  createHangupWindow();
+  // localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  // remoteStream = new MediaStream();
 
-  // Push tracks from local stream to peer connection
-  localStream.getTracks().forEach((track) => {
-    pc.addTrack(track, localStream);
-  });
+  // // Push tracks from local stream to peer connection
+  // localStream.getTracks().forEach((track) => {
+  //   pc.addTrack(track, localStream);
+  // });
 
-  // Pull tracks from remote stream, add to video stream
-  pc.ontrack = (event) => {
-    event.streams[0].getTracks().forEach((track) => {
-      remoteStream.addTrack(track);
-    });
-  };
+  // // Pull tracks from remote stream, add to video stream
+  // pc.ontrack = (event) => {
+  //   event.streams[0].getTracks().forEach((track) => {
+  //     remoteStream.addTrack(track);
+  //   });
+  // };
 
-  webcamVideo.srcObject = localStream;
-  remoteVideo.srcObject = remoteStream;
+  // webcamVideo.srcObject = localStream;
+  // remoteVideo.srcObject = remoteStream;
 
-  callButton.disabled = false;
-  answerButton.disabled = false;
-  webcamButton.disabled = true;
+  // callButton.disabled = false;
+  // answerButton.disabled = false;
+  // webcamButton.disabled = true;
 };
 
 // 2. Create an offer
