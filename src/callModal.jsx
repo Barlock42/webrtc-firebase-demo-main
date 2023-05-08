@@ -1,39 +1,59 @@
-const callModal = () => {
-  const videosStyle = {
+import React from 'react';
+
+const CallModal = () => {
+  const callModalStyle = {
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
+    height: '100vh',
+    padding: '20px',
+    backgroundColor: '#282c34'
+  };
+
+  const rowStyle = {
+    display: 'flex',
+    justifyContent: 'center',
+    marginBottom: '20px',
+  };
+
+  const actionButtonStyle = {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#25D366',
+    color: '#FFFFFF',
+    borderRadius: '50%',
+    width: '80px',
+    height: '80px',
+    margin: '10px',
+    border: 'none',
+    outline: 'none',
+    cursor: 'pointer',
   };
 
   return (
-    <>
-    <videos>
-      <div className="videos" style={videosStyle}>
-        <span>
-          <h3>Local Stream</h3>
+    <div style={callModalStyle}>
+      <div style={rowStyle}>
           <video id="webcamVideo" autoPlay playsInline></video>
-        </span>
-        <span>
-          <h3>Remote Stream</h3>
           <video id="remoteVideo" autoPlay playsInline></video>
-        </span>
       </div>
-    </videos>
-    <button id="webcamButton">Start webcam</button>
-    <h2>2. Create a new Call</h2>
-    <button id="callButton" disabled>Create Call (offer)</button>
-
-    <h2>3. Join a Call</h2>
-    <p>Answer the call from a different browser window or device</p>
-    
-    <input id="callInput" />
-    <button id="answerButton" disabled>Answer</button>
-
-    <h2>4. Hangup</h2>
-
-    <button id="hangupButton" disabled>Hangup</button>
-    </>
+      <div style={rowStyle}>
+      <button style={actionButtonStyle} id="chatButton">
+          <i className="material-icons">динамик</i>
+        </button>
+        <button style={actionButtonStyle} id="videoButton">
+          <i className="material-icons">камера</i>
+        </button>
+        <button style={actionButtonStyle} id="muteButton">
+          <i className="material-icons">микрофон</i>
+        </button>
+        <button style={actionButtonStyle} id="hangupButton">
+          <i className="material-icons">завершить звонок</i>
+        </button>
+      </div>
+    </div>
   );
 };
 
-export default callModal;
+export default CallModal;
