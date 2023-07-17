@@ -1,8 +1,7 @@
 import "./App.css";
 import React, { useRef, useState } from "react";
-import ReactDOMServer from "react-dom/server";
 
-const WebcamVideo = () => {
+const App = () => {
   const [stream, setStream] = useState(null);
   const videoRef = useRef(null);
 
@@ -21,43 +20,6 @@ const WebcamVideo = () => {
     }
   };
 
-  return (
-    <>
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          marginBottom: "20px",
-          color: "white",
-        }}
-      />
-      <button
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: "#25D366",
-          color: "#FFFFFF",
-          borderRadius: "50%",
-          width: "80px",
-          height: "80px",
-          margin: "10px",
-          border: "none",
-          outline: "none",
-          cursor: "pointer",
-        }}
-        onClick={startWebcam}
-      >
-        Камера
-      </button>
-    </>
-  );
-};
-
-const App = () => {
   const handleClick = () => {
     const newWindow = window.open("", "", "height=600,width=800");
     newWindow.document.body.innerHTML = `<div class="callModal" style="
@@ -72,9 +34,42 @@ const App = () => {
     newWindow.document.documentElement.style.margin = "0";
     newWindow.document.body.style.margin = "0";
 
+    // ${ReactDOMServer.renderToString(<WebcamVideo onButtonClick={onButtonClick}/>)}
     newWindow.document.querySelector(".callModal").innerHTML = `
-     ${ReactDOMServer.renderToString(<WebcamVideo />)}
+      <video
+      ref=${videoRef}
+        autoplay
+        playsinline
+        style="
+          display: flex;
+          justifyContent: center;
+          marginBottom: 20px;
+          color: white;
+        "
+      ></video>
+
       <button
+        id="callButton"
+        style="
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          background-color: #25D366;
+          color: #FFFFFF;
+          border-radius: 50%;
+          width: 80px;
+          height: 80px;
+          margin: 10px;
+          border: none;
+          outline: none;
+          cursor: pointer;
+        "
+      >
+        Камера
+      </button>
+
+      <button
+        id="endButton"
         style="
           display: flex;
           justify-content: center;
@@ -94,6 +89,9 @@ const App = () => {
         Положить трубку
       </button>
     `;
+
+    const callButton = newWindow.document.querySelector("#callButton");
+    callButton.addEventListener("click", startWebcam);
   };
 
   return (
