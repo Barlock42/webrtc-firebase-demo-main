@@ -1,5 +1,6 @@
 import "./App.css";
 import React, { useRef, useState } from "react";
+import ReactDOMServer from "react-dom/server";
 
 const WebcamVideo = () => {
   const [stream, setStream] = useState(null);
@@ -72,7 +73,7 @@ const App = () => {
     newWindow.document.body.style.margin = "0";
 
     newWindow.document.querySelector(".callModal").innerHTML = `
-      <WebcamVideo />
+     ${ReactDOMServer.renderToString(<WebcamVideo />)}
       <button
         style="
           display: flex;
