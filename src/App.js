@@ -6,10 +6,10 @@ import Video from "./components/video";
 const App = () => {
   const [stream, setStream] = useState(null);
   const [isComponentVisible, setIsComponentVisible] = useState(false);
+  const [isCamVisible, setIsCamVisible] = useState(false);
   const videoRef = useRef(null);
 
   const startWebcam = async () => {
-    toggleVisibility();
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: true,
@@ -24,7 +24,7 @@ const App = () => {
     }
   };
 
-  const stopWebcam = () => {  
+  const stopWebcam = () => {
     if (stream) {
       stream.getTracks().forEach((track) => track.stop());
       setStream(null);
@@ -32,24 +32,36 @@ const App = () => {
   };
 
   const toggleVisibility = () => {
-    console.log("click")
     setIsComponentVisible((prevVisibility) => !prevVisibility);
+  };
+
+  // TODO Refactor
+  const toggleCamVisibility = () => {
+    setIsCamVisible((prevVisibility) => !prevVisibility);
   };
 
   return (
     <div className="App">
       <header className="App-header">
-        {isComponentVisible && <Video videoRef={videoRef}></Video>}
+        {isCamVisible && <Video videoRef={videoRef}></Video>}
         {isComponentVisible && (
-          <Button
-            color={"red"}
-            text={"Положить трубку"}
-            clickHandler={stopWebcam}
-            toggleVisibility={toggleVisibility}
-          ></Button>
+          <div style={{ display: "flex" }}>
+            <Button
+              color={!isCamVisible ? "green" : "red"}
+              text={!isCamVisible ? "Включить камеру" : "Выключить камеру"}
+              clickHandler={!isCamVisible ? startWebcam : stopWebcam}
+              toggleVisibility={toggleCamVisibility}
+            ></Button>
+            <Button
+              color={"red"}
+              text={"Положить трубку"}
+              clickHandler={stopWebcam}
+              toggleVisibility={toggleVisibility}
+            ></Button>
+          </div>
         )}
         {!isComponentVisible && (
-          <button className="App-button" onClick={startWebcam}>
+          <button className="App-button" onClick={toggleVisibility}>
             Начать звонок
           </button>
         )}
