@@ -10,6 +10,7 @@ function Video({ videoRef }) {
 
 
     return <video
+          ref={videoRef}
           autoPlay
           playsInline
           style = {style}

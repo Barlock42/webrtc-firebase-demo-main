@@ -9,6 +9,23 @@ const App = () => {
   const [isCamVisible, setIsCamVisible] = useState(false);
   const videoRef = useRef(null);
 
+  const servers = {
+    iceServers: [
+      {
+        urls: [
+          "stun:stun1.l.google.com:19302",
+          "stun:stun2.l.google.com:19302",
+        ],
+      },
+    ],
+    iceCandidatePoolSize: 10,
+  };
+
+  // Global State
+  // const pc = new RTCPeerConnection(servers);
+  let localStream = null;
+  let remoteStream = null;
+
   const startWebcam = async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -16,6 +33,7 @@ const App = () => {
         audio: true,
       });
       setStream(mediaStream);
+      console.log(videoRef.current);
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
       }
@@ -47,7 +65,7 @@ const App = () => {
         {isComponentVisible && (
           <div style={{ display: "flex" }}>
             <Button
-              color={!isCamVisible ? "green" : "red"}
+              color={!isCamVisible ? "#25D366" : "red"}
               text={!isCamVisible ? "Включить камеру" : "Выключить камеру"}
               clickHandler={!isCamVisible ? startWebcam : stopWebcam}
               toggleVisibility={toggleCamVisibility}
