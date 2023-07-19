@@ -34,12 +34,12 @@ const App = () => {
         audio: false,
       });
       setStream(mediaStream);
-      console.log(audioRef.current);
-      if (audioRef.current) {
-        audioRef.current.srcObject = mediaStream;
+      console.log(videoRef.current);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
       }
     } catch (error) {
-      console.error("Ошибка доступа к микрофону:", error);
+      console.error("Ошибка доступа к камере:", error);
     }
   };
 
@@ -57,12 +57,12 @@ const App = () => {
         audio: true,
       });
       setStream(mediaStream);
-      console.log(videoRef.current);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
+      console.log(audioRef.current);
+      if (audioRef.current) {
+        audioRef.current.srcObject = mediaStream;
       }
     } catch (error) {
-      console.error("Ошибка доступа к камере:", error);
+      console.error("Ошибка доступа к микрофону:", error);
     }
   };
 
