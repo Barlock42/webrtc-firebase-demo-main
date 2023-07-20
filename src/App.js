@@ -109,15 +109,12 @@ const App = () => {
               color={"red"}
               text={"Положить трубку"}
               clickHandler={stopWebcam}
-              toggleVisibility={toggleCamVisibility}
+              toggleVisibility={toggleVisibility}
             ></Button>
           </div>
         )}
         {!isComponentVisible && (
-          <button
-            className="App-button"
-            onClick={toggleVisibility}
-          >
+          <button className="App-button" onClick={toggleVisibility}>
             Начать звонок
           </button>
         )}
