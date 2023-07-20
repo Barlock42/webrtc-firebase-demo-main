@@ -2,6 +2,7 @@ import "./App.css";
 import React, { useRef, useState } from "react";
 import Button from "./components/button";
 import Video from "./components/video";
+import Audio from "./components/audio";
 
 const App = () => {
   const [stream, setStream] = useState(null);
@@ -32,7 +33,7 @@ const App = () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: true,
-        audio: false,
+        audio: true,
       });
       setStream(mediaStream);
       console.log(videoRef.current);
@@ -103,6 +104,7 @@ const App = () => {
               clickHandler={!isMikeOn ? startMike : stopMike}
               toggleVisibility={() => {}}
             ></Button>
+            {/* {isMikeOn  && <Audio audioRef={audioRef}></Audio>} */}
             <Button
               color={"red"}
               text={"Положить трубку"}
