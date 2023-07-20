@@ -7,6 +7,7 @@ const App = () => {
   const [stream, setStream] = useState(null);
   const [isComponentVisible, setIsComponentVisible] = useState(false);
   const [isCamVisible, setIsCamVisible] = useState(false);
+  const [isMikeOn, setIsMikeOn] = useState(false);
   const videoRef = useRef(null);
   const audioRef = useRef(null);
 
@@ -52,6 +53,7 @@ const App = () => {
 
   const startMike = async () => {
     try {
+      setIsMikeOn(true);
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: false,
         audio: true,
@@ -68,6 +70,7 @@ const App = () => {
 
   const stopMike = () => {
     if (stream) {
+      setIsMikeOn(false);
       stream.getTracks().forEach((track) => track.stop());
       setStream(null);
     }
@@ -94,11 +97,12 @@ const App = () => {
               clickHandler={!isCamVisible ? startWebcam : stopWebcam}
               toggleVisibility={toggleCamVisibility}
             ></Button>
-            {/* <Button
-              color={!isCamVisible ? "#25D366" : "red"}
-              text={!isCamVisible ? "Включить микрофон" : "Выключить микрофон"}
-              clickHandler={!isCamVisible ? startMike : stopMike}
-            ></Button> */}
+            <Button
+              color={!isMikeOn ? "#25D366" : "red"}
+              text={!isMikeOn ? "Включить микрофон" : "Выключить микрофон"}
+              clickHandler={!isMikeOn ? startMike : stopMike}
+              toggleVisibility={() => {}}
+            ></Button>
             <Button
               color={"red"}
               text={"Положить трубку"}
