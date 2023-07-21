@@ -33,7 +33,7 @@ const App = () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: true,
-        audio: true,
+        audio: false,
       });
       setStream(mediaStream);
       console.log(videoRef.current);
@@ -104,7 +104,7 @@ const App = () => {
               clickHandler={!isMikeOn ? startMike : stopMike}
               toggleVisibility={() => {}}
             ></Button>
-            {/* {isMikeOn  && <Audio audioRef={audioRef}></Audio>} */}
+            {isMikeOn  && <Audio audioRef={audioRef}></Audio>}
             <Button
               color={"red"}
               text={"Положить трубку"}
