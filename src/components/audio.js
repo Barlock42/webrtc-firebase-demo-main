@@ -5,7 +5,6 @@ function Audio({ audioRef }) {
     return <audio
           ref={audioRef}
           autoPlay
-          playsInline
         ></audio>
 }
 
