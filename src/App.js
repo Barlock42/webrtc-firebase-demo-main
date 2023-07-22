@@ -2,15 +2,13 @@ import "./App.css";
 import React, { useRef, useState } from "react";
 import Button from "./components/button";
 import Video from "./components/video";
-import Audio from "./components/audio";
 
 const App = () => {
   const [stream, setStream] = useState(null);
   const [isComponentVisible, setIsComponentVisible] = useState(false);
   const [isCamVisible, setIsCamVisible] = useState(false);
   const [isMikeOn, setIsMikeOn] = useState(false);
-  const videoRef = useRef(null);
-  const audioRef = useRef(null);
+  const mediaRef = useRef(null);
 
   const servers = {
     iceServers: [
@@ -36,9 +34,9 @@ const App = () => {
         audio: false,
       });
       setStream(mediaStream);
-      console.log(videoRef.current);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
+      console.log(mediaRef.current);
+      if (mediaRef.current) {
+        mediaRef.current.srcObject = mediaStream;
       }
     } catch (error) {
       console.error("Ошибка доступа к камере:", error);
@@ -47,8 +45,14 @@ const App = () => {
 
   const stopWebcam = () => {
     if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      setStream(null);
+      if (stream.getAudioTracks().length > 0) {
+        stream.getVideoTracks()[0].stop()
+        stream.removeTrack(stream.getVideoTracks()[0]);
+      }
+      else {
+        stream.getTracks().forEach((track) => track.stop());
+        setStream(null);
+      }
     }
   };
 
@@ -59,10 +63,16 @@ const App = () => {
         video: false,
         audio: true,
       });
-      setStream(mediaStream);
-      console.log(audioRef.current);
-      if (audioRef.current) {
-        audioRef.current.srcObject = mediaStream;
+      const audioTrack = mediaStream.getAudioTracks()[0];
+
+      if (stream !== null && stream.getVideoTracks().length > 0) {
+        stream.addTrack(audioTrack);
+      } else {
+        setStream(mediaStream);
+        console.log(mediaRef.current);
+        if (mediaRef.current) {
+          mediaRef.current.srcObject = mediaStream;
+        }
       }
     } catch (error) {
       console.error("Ошибка доступа к микрофону:", error);
@@ -72,8 +82,13 @@ const App = () => {
   const stopMike = () => {
     if (stream) {
       setIsMikeOn(false);
-      stream.getTracks().forEach((track) => track.stop());
-      setStream(null);
+      if (stream.getVideoTracks().length > 0) {
+        stream.removeTrack(stream.getAudioTracks()[0]);
+      }
+      else {
+        stream.getTracks().forEach((track) => track.stop());
+        setStream(null);
+      }
     }
   };
 
@@ -89,7 +104,8 @@ const App = () => {
   return (
     <div className="App">
       <header className="App-header">
-        {isCamVisible && <Video videoRef={videoRef}></Video>}
+        {/* {isCamVisible && <Video videoRef={mediaRef}></Video>} */}
+        <Video videoRef={mediaRef}></Video>
         {isComponentVisible && (
           <div style={{ display: "flex" }}>
             <Button
@@ -104,7 +120,7 @@ const App = () => {
               clickHandler={!isMikeOn ? startMike : stopMike}
               toggleVisibility={() => {}}
             ></Button>
-            {isMikeOn  && <Audio audioRef={audioRef}></Audio>}
+            {/* {isMikeOn && <audio ref={mediaRef} autoPlay />} */}
             <Button
               color={"red"}
               text={"Положить трубку"}
