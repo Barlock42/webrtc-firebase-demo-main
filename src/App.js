@@ -31,12 +31,18 @@ const App = () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: true,
-        audio: false,
       });
-      setStream(mediaStream);
-      console.log(mediaRef.current);
-      if (mediaRef.current) {
-        mediaRef.current.srcObject = mediaStream;
+      const videoTrack = mediaStream.getVideoTracks()[0];
+
+      if (stream !== null && stream.getAudioTracks().length > 0) {
+        console.log(mediaRef.current);
+        stream.addTrack(videoTrack);
+      } else {
+        setStream(mediaStream);
+        console.log(mediaRef.current);
+        if (mediaRef.current) {
+          mediaRef.current.srcObject = mediaStream;
+        }
       }
     } catch (error) {
       console.error("Ошибка доступа к камере:", error);
@@ -46,10 +52,9 @@ const App = () => {
   const stopWebcam = () => {
     if (stream) {
       if (stream.getAudioTracks().length > 0) {
-        stream.getVideoTracks()[0].stop()
+        stream.getVideoTracks()[0].stop();
         stream.removeTrack(stream.getVideoTracks()[0]);
-      }
-      else {
+      } else {
         stream.getTracks().forEach((track) => track.stop());
         setStream(null);
       }
@@ -60,18 +65,19 @@ const App = () => {
     try {
       setIsMikeOn(true);
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: false,
         audio: true,
       });
       const audioTrack = mediaStream.getAudioTracks()[0];
 
       if (stream !== null && stream.getVideoTracks().length > 0) {
+        console.log(mediaRef.current);
         stream.addTrack(audioTrack);
       } else {
         setStream(mediaStream);
         console.log(mediaRef.current);
         if (mediaRef.current) {
           mediaRef.current.srcObject = mediaStream;
+          mediaRef.current.play();
         }
       }
     } catch (error) {
@@ -84,8 +90,7 @@ const App = () => {
       setIsMikeOn(false);
       if (stream.getVideoTracks().length > 0) {
         stream.removeTrack(stream.getAudioTracks()[0]);
-      }
-      else {
+      } else {
         stream.getTracks().forEach((track) => track.stop());
         setStream(null);
       }
@@ -104,8 +109,7 @@ const App = () => {
   return (
     <div className="App">
       <header className="App-header">
-        {/* {isCamVisible && <Video videoRef={mediaRef}></Video>} */}
-        <Video videoRef={mediaRef}></Video>
+        {isCamVisible && <Video videoRef={mediaRef}></Video>}
         {isComponentVisible && (
           <div style={{ display: "flex" }}>
             <Button
@@ -120,7 +124,7 @@ const App = () => {
               clickHandler={!isMikeOn ? startMike : stopMike}
               toggleVisibility={() => {}}
             ></Button>
-            {/* {isMikeOn && <audio ref={mediaRef} autoPlay />} */}
+            {isMikeOn && <audio ref={mediaRef} autoPlay/>}
             <Button
               color={"red"}
               text={"Положить трубку"}
