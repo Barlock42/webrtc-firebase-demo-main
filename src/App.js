@@ -37,6 +37,9 @@ const App = () => {
       if (stream !== null && stream.getAudioTracks().length > 0) {
         console.log(mediaRef.current);
         stream.addTrack(videoTrack);
+        if (mediaRef.current) {
+          mediaRef.current.srcObject = mediaStream;
+        }
       } else {
         setStream(mediaStream);
         console.log(mediaRef.current);
@@ -124,7 +127,7 @@ const App = () => {
               clickHandler={!isMikeOn ? startMike : stopMike}
               toggleVisibility={() => {}}
             ></Button>
-            {isMikeOn && <audio ref={mediaRef} autoPlay/>}
+            {isMikeOn && <audio ref={mediaRef} autoPlay />}
             <Button
               color={"red"}
               text={"Положить трубку"}
