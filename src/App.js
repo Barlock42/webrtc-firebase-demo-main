@@ -72,10 +72,10 @@ const App = () => {
         stream.addTrack(audioTrack);
       } else {
         setStream(mediaStream);
-        if (mediaRef.current) {
-          mediaRef.current.srcObject = mediaStream;
-          mediaRef.current.play();
-        }
+      }
+      if (mediaRef.current) {
+        mediaRef.current.srcObject = mediaStream;
+        mediaRef.current.play();
       }
     } catch (error) {
       console.error("Ошибка доступа к микрофону:", error);
