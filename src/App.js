@@ -35,17 +35,13 @@ const App = () => {
       const videoTrack = mediaStream.getVideoTracks()[0];
 
       if (stream !== null && stream.getAudioTracks().length > 0) {
-        console.log(mediaRef.current);
         stream.addTrack(videoTrack);
-        if (mediaRef.current) {
-          mediaRef.current.srcObject = mediaStream;
-        }
       } else {
         setStream(mediaStream);
-        console.log(mediaRef.current);
-        if (mediaRef.current) {
-          mediaRef.current.srcObject = mediaStream;
-        }
+      }
+
+      if (mediaRef.current) {
+        mediaRef.current.srcObject = mediaStream;
       }
     } catch (error) {
       console.error("Ошибка доступа к камере:", error);
@@ -73,11 +69,9 @@ const App = () => {
       const audioTrack = mediaStream.getAudioTracks()[0];
 
       if (stream !== null && stream.getVideoTracks().length > 0) {
-        console.log(mediaRef.current);
         stream.addTrack(audioTrack);
       } else {
         setStream(mediaStream);
-        console.log(mediaRef.current);
         if (mediaRef.current) {
           mediaRef.current.srcObject = mediaStream;
           mediaRef.current.play();
