@@ -4,8 +4,8 @@ import Button from "./components/button";
 import Video from "./components/video";
 
 import firebaseConfig from "./firebaseConfig.js";
-import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
 
 const App = () => {
   const [stream, setStream] = useState(null);
@@ -14,8 +14,7 @@ const App = () => {
   const [isMikeOn, setIsMikeOn] = useState(false);
   const mediaRef = useRef(null);
 
-  
-// Initialize Firebase with the provided firebaseConfig
+  // Initialize Firebase with the provided firebaseConfig
   initializeApp(firebaseConfig);
   const firestore = getFirestore();
   const servers = {
@@ -102,13 +101,8 @@ const App = () => {
     }
   };
 
-  const toggleVisibility = () => {
+  const toggleVisibility = async () => {
     setIsComponentVisible((prevVisibility) => !prevVisibility);
-  };
-
-  // TODO Refactor
-  const toggleCamVisibility = async () => {
-    setIsCamVisible((prevVisibility) => !prevVisibility);
 
     // Reference Firestore collections for signaling
     const callDoc = firestore.collection("calls").doc();
@@ -148,6 +142,11 @@ const App = () => {
         }
       });
     });
+  };
+
+  // TODO Refactor
+  const toggleCamVisibility = () => {
+    setIsCamVisible((prevVisibility) => !prevVisibility);
   };
 
   return (
