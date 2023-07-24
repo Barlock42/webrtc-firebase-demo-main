@@ -5,7 +5,13 @@ import Video from "./components/video";
 
 import firebaseConfig from "./firebaseConfig.js";
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import {
+  doc,
+  collection,
+  getFirestore,
+  setDoc,
+  onSnapshot,
+} from "firebase/firestore";
 
 const App = () => {
   const [stream, setStream] = useState(null);
@@ -105,9 +111,10 @@ const App = () => {
     setIsComponentVisible((prevVisibility) => !prevVisibility);
 
     // Reference Firestore collections for signaling
-    const callDoc = firestore.collection("calls").doc();
-    const offerCandidates = callDoc.collection("offerCandidates");
-    const answerCandidates = callDoc.collection("answerCandidates");
+    const callCollection = collection(firestore, "calls");
+    const callDoc = doc(callCollection); // Automatically generates a new document ID
+    const offerCandidates = collection(firestore, "offerCandidates");
+    const answerCandidates = collection(firestore, "answerCandidates");
     // Get candidates for caller, save to db
     pc.onicecandidate = (event) => {
       event.candidate && offerCandidates.add(event.candidate.toJSON());
@@ -122,26 +129,27 @@ const App = () => {
       type: offerDescription.type,
     };
 
-    await callDoc.set({ offer });
+    await setDoc(callDoc, { offer });
 
-    // Listen for remote answer
-    callDoc.onSnapshot((snapshot) => {
-      const data = snapshot.data();
+    // Subscribe to changes using onSnapshot and Listen for remote answer
+    onSnapshot(callDoc, (docSnapshot) => {
+      // Handle document snapshot changes here
+      const data = docSnapshot.data();
       if (!pc.currentRemoteDescription && data?.answer) {
         const answerDescription = new RTCSessionDescription(data.answer);
         pc.setRemoteDescription(answerDescription);
       }
     });
 
-    // When answered, add candidate to peer connection
-    answerCandidates.onSnapshot((snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === "added") {
-          const candidate = new RTCIceCandidate(change.doc.data());
-          pc.addIceCandidate(candidate);
-        }
-      });
-    });
+    // // When answered, add candidate to peer connection
+    // answerCandidates.onSnapshot((snapshot) => {
+    //   snapshot.docChanges().forEach((change) => {
+    //     if (change.type === "added") {
+    //       const candidate = new RTCIceCandidate(change.doc.data());
+    //       pc.addIceCandidate(candidate);
+    //     }
+    //   });
+    // });
   };
 
   // TODO Refactor
