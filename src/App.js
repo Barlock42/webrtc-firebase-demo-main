@@ -11,13 +11,19 @@ import {
   getFirestore,
   setDoc,
   onSnapshot,
+  query,
+  orderBy,
+  limit,
+  getDocs,
+  serverTimestamp,
 } from "firebase/firestore";
 
 const App = () => {
-  const [stream, setStream] = useState(null);
+  const [localStream, setStream] = useState(null);
   const [isComponentVisible, setIsComponentVisible] = useState(false);
   const [isCamVisible, setIsCamVisible] = useState(false);
   const [isMikeOn, setIsMikeOn] = useState(false);
+  const [callId, setCallId] = useState(null);
   const mediaRef = useRef(null);
 
   // Initialize Firebase with the provided firebaseConfig
@@ -37,8 +43,6 @@ const App = () => {
 
   // Global State
   const pc = new RTCPeerConnection(servers);
-  let localStream = null;
-  let remoteStream = null;
 
   const startWebcam = async () => {
     try {
@@ -47,8 +51,8 @@ const App = () => {
       });
       const videoTrack = mediaStream.getVideoTracks()[0];
 
-      if (stream !== null && stream.getAudioTracks().length > 0) {
-        stream.addTrack(videoTrack);
+      if (localStream !== null && localStream.getAudioTracks().length > 0) {
+        localStream.addTrack(videoTrack);
       } else {
         setStream(mediaStream);
       }
@@ -62,12 +66,12 @@ const App = () => {
   };
 
   const stopWebcam = () => {
-    if (stream) {
-      if (stream.getAudioTracks().length > 0) {
-        stream.getVideoTracks()[0].stop();
-        stream.removeTrack(stream.getVideoTracks()[0]);
+    if (localStream) {
+      if (localStream.getAudioTracks().length > 0) {
+        localStream.getVideoTracks()[0].stop();
+        localStream.removeTrack(localStream.getVideoTracks()[0]);
       } else {
-        stream.getTracks().forEach((track) => track.stop());
+        localStream.getTracks().forEach((track) => track.stop());
         setStream(null);
       }
     }
@@ -81,8 +85,8 @@ const App = () => {
       });
       const audioTrack = mediaStream.getAudioTracks()[0];
 
-      if (stream !== null && stream.getVideoTracks().length > 0) {
-        stream.addTrack(audioTrack);
+      if (localStream !== null && localStream.getVideoTracks().length > 0) {
+        localStream.addTrack(audioTrack);
       } else {
         setStream(mediaStream);
       }
@@ -96,12 +100,12 @@ const App = () => {
   };
 
   const stopMike = () => {
-    if (stream) {
+    if (localStream) {
       setIsMikeOn(false);
-      if (stream.getVideoTracks().length > 0) {
-        stream.removeTrack(stream.getAudioTracks()[0]);
+      if (localStream.getVideoTracks().length > 0) {
+        localStream.removeTrack(localStream.getAudioTracks()[0]);
       } else {
-        stream.getTracks().forEach((track) => track.stop());
+        localStream.getTracks().forEach((track) => track.stop());
         setStream(null);
       }
     }
@@ -113,6 +117,8 @@ const App = () => {
     // Reference Firestore collections for signaling
     const callCollection = collection(firestore, "calls");
     const callDoc = doc(callCollection); // Automatically generates a new document ID
+    // Set callId
+    setCallId(callDoc.id);
     const offerCandidates = collection(firestore, "offerCandidates");
     const answerCandidates = collection(firestore, "answerCandidates");
     // Get candidates for caller, save to db
@@ -120,16 +126,18 @@ const App = () => {
       event.candidate && offerCandidates.add(event.candidate.toJSON());
     };
 
-    // Create offer
+    // Create an offer
     const offerDescription = await pc.createOffer();
     await pc.setLocalDescription(offerDescription);
 
     const offer = {
       sdp: offerDescription.sdp,
-      type: offerDescription.type,
+      type: offerDescription.type
     };
+    const timestamp = serverTimestamp();
 
-    await setDoc(callDoc, { offer });
+    // Use serverTimestamp here
+    await setDoc(callDoc, { offer, timestamp });
 
     // Subscribe to changes using onSnapshot and Listen for remote answer
     onSnapshot(callDoc, (docSnapshot) => {
@@ -141,12 +149,79 @@ const App = () => {
       }
     });
 
-    // // When answered, add candidate to peer connection
-    // answerCandidates.onSnapshot((snapshot) => {
+    // When answered, add candidate to peer connection
+    onSnapshot(answerCandidates, (docSnapshot) => {
+      docSnapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          const candidate = new RTCIceCandidate(change.doc.data());
+          pc.addIceCandidate(candidate);
+        }
+      });
+    });
+  };
+
+  const acceptCall = async () => {
+    setIsCamVisible((prevVisibility) => !prevVisibility);
+    // Answer the call with the unique ID
+    const callsCollection = collection(firestore, "calls");
+    // Create a query to get the latest offer document based on the 'timestamp' field
+    const latestOfferQuery = query(
+      callsCollection,
+      orderBy("timestamp", "desc"),
+      limit(1)
+    );
+
+    let lastCallId = null;
+    // Execute the query to get the latest document
+    getDocs(latestOfferQuery)
+      .then(async (querySnapshot) => {
+        if (!querySnapshot.empty) {
+          // Get the ID of the last offer document
+          lastCallId = querySnapshot.docs[0].id;
+          console.log("ID of the last offer document:", lastCallId);
+          // TODO: Completely change this temp Solution
+          const callCollection = collection(firestore, `calls/${lastCallId}/offer` );
+          const callDoc = doc(callCollection); // Automatically generates a new document ID\
+          const offerCandidates = collection(firestore, "offerCandidates");
+          const answerCandidates = collection(firestore, "answerCandidates");
+
+          pc.onicecandidate = (event) => {
+            event.candidate && answerCandidates.add(event.candidate.toJSON());
+          };
+
+          // Use serverTimestamp here
+          // await getDoc(callDoc, { offer, timestamp });
+
+          const callData = (await callDoc.get()).data();
+
+          const offerDescription = callData.offer;
+          await pc.setRemoteDescription(
+            new RTCSessionDescription(offerDescription)
+          );
+
+          const answerDescription = await pc.createAnswer();
+          await pc.setLocalDescription(answerDescription);
+        } else {
+          console.log("No offer documents found.");
+        }
+      })
+      .catch((error) => {
+        console.log("Error getting offer documents:", error);
+      });
+
+    // const answer = {
+    //   type: answerDescription.type,
+    //   sdp: answerDescription.sdp,
+    // };
+
+    // await callDoc.update({ answer });
+
+    // offerCandidates.onSnapshot((snapshot) => {
     //   snapshot.docChanges().forEach((change) => {
-    //     if (change.type === "added") {
-    //       const candidate = new RTCIceCandidate(change.doc.data());
-    //       pc.addIceCandidate(candidate);
+    //     console.log(change);
+    //     if (change.type === 'added') {
+    //       let data = change.doc.data();
+    //       pc.addIceCandidate(new RTCIceCandidate(data));
     //     }
     //   });
     // });
@@ -185,9 +260,14 @@ const App = () => {
           </div>
         )}
         {!isComponentVisible && (
-          <button className="App-button" onClick={toggleVisibility}>
-            Начать звонок
-          </button>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <button className="App-button" onClick={toggleVisibility}>
+              Начать звонок
+            </button>
+            <button className="App-button" onClick={acceptCall}>
+              Принять звонок
+            </button>
+          </div>
         )}
       </header>
     </div>
