@@ -3,6 +3,10 @@ import React, { useRef, useState } from "react";
 import Button from "./components/button";
 import Video from "./components/video";
 
+import firebaseConfig from "./firebaseConfig.js";
+import { initializeApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
+
 const App = () => {
   const [stream, setStream] = useState(null);
   const [isComponentVisible, setIsComponentVisible] = useState(false);
@@ -10,6 +14,10 @@ const App = () => {
   const [isMikeOn, setIsMikeOn] = useState(false);
   const mediaRef = useRef(null);
 
+  
+// Initialize Firebase with the provided firebaseConfig
+  initializeApp(firebaseConfig);
+  const firestore = getFirestore();
   const servers = {
     iceServers: [
       {
@@ -23,7 +31,7 @@ const App = () => {
   };
 
   // Global State
-  // const pc = new RTCPeerConnection(servers);
+  const pc = new RTCPeerConnection(servers);
   let localStream = null;
   let remoteStream = null;
 
@@ -99,8 +107,47 @@ const App = () => {
   };
 
   // TODO Refactor
-  const toggleCamVisibility = () => {
+  const toggleCamVisibility = async () => {
     setIsCamVisible((prevVisibility) => !prevVisibility);
+
+    // Reference Firestore collections for signaling
+    const callDoc = firestore.collection("calls").doc();
+    const offerCandidates = callDoc.collection("offerCandidates");
+    const answerCandidates = callDoc.collection("answerCandidates");
+    // Get candidates for caller, save to db
+    pc.onicecandidate = (event) => {
+      event.candidate && offerCandidates.add(event.candidate.toJSON());
+    };
+
+    // Create offer
+    const offerDescription = await pc.createOffer();
+    await pc.setLocalDescription(offerDescription);
+
+    const offer = {
+      sdp: offerDescription.sdp,
+      type: offerDescription.type,
+    };
+
+    await callDoc.set({ offer });
+
+    // Listen for remote answer
+    callDoc.onSnapshot((snapshot) => {
+      const data = snapshot.data();
+      if (!pc.currentRemoteDescription && data?.answer) {
+        const answerDescription = new RTCSessionDescription(data.answer);
+        pc.setRemoteDescription(answerDescription);
+      }
+    });
+
+    // When answered, add candidate to peer connection
+    answerCandidates.onSnapshot((snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          const candidate = new RTCIceCandidate(change.doc.data());
+          pc.addIceCandidate(candidate);
+        }
+      });
+    });
   };
 
   return (
