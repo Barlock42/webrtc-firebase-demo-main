@@ -201,6 +201,11 @@ const App = () => {
 
           const answerDescription = await pc.createAnswer();
           await pc.setLocalDescription(answerDescription);
+
+          const answer = {
+            type: answerDescription.type,
+            sdp: answerDescription.sdp,
+          };
         } else {
           console.log("No offer documents found.");
         }
@@ -208,11 +213,6 @@ const App = () => {
       .catch((error) => {
         console.log("Error getting offer documents:", error);
       });
-
-    // const answer = {
-    //   type: answerDescription.type,
-    //   sdp: answerDescription.sdp,
-    // };
 
     // await callDoc.update({ answer });
 
