@@ -15,6 +15,8 @@ import {
   orderBy,
   limit,
   getDocs,
+  getDoc,
+  updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
 
@@ -132,7 +134,7 @@ const App = () => {
 
     const offer = {
       sdp: offerDescription.sdp,
-      type: offerDescription.type
+      type: offerDescription.type,
     };
     const timestamp = serverTimestamp();
 
@@ -180,8 +182,8 @@ const App = () => {
           lastCallId = querySnapshot.docs[0].id;
           console.log("ID of the last offer document:", lastCallId);
           // TODO: Completely change this temp Solution
-          const callCollection = collection(firestore, `calls/${lastCallId}/offer` );
-          const callDoc = doc(callCollection); // Automatically generates a new document ID\
+          const callCollectionRef = collection(firestore, "calls");
+          const callDoc = doc(callCollectionRef, lastCallId);
           const offerCandidates = collection(firestore, "offerCandidates");
           const answerCandidates = collection(firestore, "answerCandidates");
 
@@ -189,10 +191,8 @@ const App = () => {
             event.candidate && answerCandidates.add(event.candidate.toJSON());
           };
 
-          // Use serverTimestamp here
-          // await getDoc(callDoc, { offer, timestamp });
-
-          const callData = (await callDoc.get()).data();
+          const callDataSnapshot = await getDoc(callDoc);
+          const callData = callDataSnapshot.data();
 
           const offerDescription = callData.offer;
           await pc.setRemoteDescription(
@@ -206,6 +206,18 @@ const App = () => {
             type: answerDescription.type,
             sdp: answerDescription.sdp,
           };
+
+          await updateDoc(callDoc, answer);
+
+          onSnapshot(offerCandidates, (docSnapshot) => {
+            docSnapshot.docChanges().forEach((change) => {
+              console.log(change);
+              if (change.type === "added") {
+                const candidate = new RTCIceCandidate(change.doc.data());
+                pc.addIceCandidate(candidate);
+              }
+            });
+          });
         } else {
           console.log("No offer documents found.");
         }
@@ -213,18 +225,6 @@ const App = () => {
       .catch((error) => {
         console.log("Error getting offer documents:", error);
       });
-
-    // await callDoc.update({ answer });
-
-    // offerCandidates.onSnapshot((snapshot) => {
-    //   snapshot.docChanges().forEach((change) => {
-    //     console.log(change);
-    //     if (change.type === 'added') {
-    //       let data = change.doc.data();
-    //       pc.addIceCandidate(new RTCIceCandidate(data));
-    //     }
-    //   });
-    // });
   };
 
   // TODO Refactor
