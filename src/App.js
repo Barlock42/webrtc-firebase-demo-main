@@ -1,5 +1,5 @@
 import "./App.css";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import Button from "./components/button";
 import Video from "./components/video";
 
@@ -24,7 +24,8 @@ const App = () => {
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
   const [isComponentVisible, setIsComponentVisible] = useState(false);
-  const [isCamVisible, setIsCamVisible] = useState(false);
+  const [isLocaleCamVisible, setIsLocaleCamVisible] = useState(false);
+  const [isRemoteCamVisible, setIsRemoteCamVisible] = useState(false);
   const [isMikeOn, setIsMikeOn] = useState(false);
   const [callId, setCallId] = useState(null);
   const localMediaRef = useRef(null);
@@ -33,20 +34,25 @@ const App = () => {
   // Initialize Firebase with the provided firebaseConfig
   initializeApp(firebaseConfig);
   const firestore = getFirestore();
-  const servers = {
-    iceServers: [
-      {
-        urls: [
-          "stun:stun1.l.google.com:19302",
-          "stun:stun2.l.google.com:19302",
-        ],
-      },
-    ],
-    iceCandidatePoolSize: 10,
-  };
 
   // Global State
-  const pc = new RTCPeerConnection(servers);
+  const pcRef = useRef(null); // Create a ref to store the RTCPeerConnection object.
+  // Initialize RTCPeerConnection only once when the component mounts.
+  useEffect(() => {
+    const servers = {
+      iceServers: [
+        {
+          urls: [
+            "stun:stun1.l.google.com:19302",
+            "stun:stun2.l.google.com:19302",
+          ],
+        },
+      ],
+      iceCandidatePoolSize: 10,
+    };
+
+    pcRef.current = new RTCPeerConnection(servers);
+  }, []);
 
   const startWebcam = async () => {
     try {
@@ -55,12 +61,22 @@ const App = () => {
       });
       const videoTrack = mediaStream.getVideoTracks()[0];
 
-      // Push tracks from local stream to peer connection
+      // Set local stream
       if (localStream !== null && localStream.getAudioTracks().length > 0) {
         localStream.addTrack(videoTrack);
-        pc.addTrack(videoTrack, localStream);
+        // Push tracks from local stream to peer connection
+        if (pcRef.current) {
+          const audioTrack = localStream.getAudioTracks()[0];
+          pcRef.current.addTrack(videoTrack, mediaStream);
+          pcRef.current.addTrack(audioTrack, mediaStream);
+          console.log(pcRef.current);
+        }
       } else {
         setLocalStream(mediaStream);
+        if (pcRef.current) {
+          pcRef.current.addTrack(videoTrack, mediaStream);
+          console.log(pcRef.current);
+        }
       }
 
       if (localMediaRef.current) {
@@ -81,6 +97,18 @@ const App = () => {
         setLocalStream(null);
       }
     }
+    if (pcRef.current) {
+      console.log(pcRef.current);
+      const videoTrack = localStream.getVideoTracks()[0];
+      const videoSender = pcRef.current
+        .getSenders()
+        .find((sender) => sender.track === videoTrack);
+
+      if (videoSender) {
+        pcRef.current.removeTrack(videoSender);
+      }
+      // console.log(pcRef.current);
+    }
   };
 
   const startMike = async () => {
@@ -93,8 +121,18 @@ const App = () => {
 
       if (localStream !== null && localStream.getVideoTracks().length > 0) {
         localStream.addTrack(audioTrack);
+        if (pcRef.current) {
+          const videoTrack = localStream.getVideoTracks()[0];
+          pcRef.current.addTrack(videoTrack, mediaStream);
+          pcRef.current.addTrack(audioTrack, mediaStream);
+          console.log(pcRef.current);
+        }
       } else {
         setLocalStream(mediaStream);
+        if (pcRef.current) {
+          pcRef.current.addTrack(audioTrack, mediaStream);
+          console.log(pcRef.current);
+        }
       }
       if (localMediaRef.current) {
         localMediaRef.current.srcObject = mediaStream;
@@ -115,23 +153,27 @@ const App = () => {
         setLocalStream(null);
       }
     }
+    if (pcRef.current) {
+      console.log(pcRef.current);
+      const audioTrack = localStream.getAudioTracks()[0];
+      const audioSender = pcRef.current
+        .getSenders()
+        .find((sender) => sender.track === audioTrack);
+
+      if (audioSender) {
+        pcRef.current.removeTrack(audioSender);
+      }
+      // console.log(pcRef.current);
+    }
   };
 
   const toggleVisibility = async () => {
     setIsComponentVisible((prevVisibility) => !prevVisibility);
 
-    setRemoteStream(new MediaStream());
-    // Pull tracks from remote stream, add to video stream
-    pc.ontrack = (event) => {
-      event.streams[0].getTracks().forEach((track) => {
-        remoteStream.addTrack(track);
-        // console.log(remoteMediaRef.current);
-        // if (remoteMediaRef.current) {
-        //   remoteMediaRef.current.srcObject = remoteStream;
-        //   remoteMediaRef.current.play();
-        // }
-      });
-    };
+    // // Push tracks from local stream to peer connection
+    // localStream.getTracks().forEach((track) => {
+    //   pcRef.current.addTrack(track, localStream);
+    // });
 
     // Reference Firestore collections for signaling
     const callCollection = collection(firestore, "calls");
@@ -141,13 +183,13 @@ const App = () => {
     const offerCandidates = collection(firestore, "offerCandidates");
     const answerCandidates = collection(firestore, "answerCandidates");
     // Get candidates for caller, save to db
-    pc.onicecandidate = (event) => {
+    pcRef.current.onicecandidate = (event) => {
       event.candidate && offerCandidates.add(event.candidate.toJSON());
     };
 
     // Create an offer
-    const offerDescription = await pc.createOffer();
-    await pc.setLocalDescription(offerDescription);
+    const offerDescription = await pcRef.current.createOffer();
+    await pcRef.current.setLocalDescription(offerDescription);
 
     const offer = {
       sdp: offerDescription.sdp,
@@ -162,9 +204,9 @@ const App = () => {
     onSnapshot(callDoc, (docSnapshot) => {
       // Handle document snapshot changes here
       const data = docSnapshot.data();
-      if (!pc.currentRemoteDescription && data?.answer) {
+      if (!pcRef.current.currentRemoteDescription && data?.answer) {
         const answerDescription = new RTCSessionDescription(data.answer);
-        pc.setRemoteDescription(answerDescription);
+        pcRef.current.setRemoteDescription(answerDescription);
       }
     });
 
@@ -173,14 +215,30 @@ const App = () => {
       docSnapshot.docChanges().forEach((change) => {
         if (change.type === "added") {
           const candidate = new RTCIceCandidate(change.doc.data());
-          pc.addIceCandidate(candidate);
+          pcRef.current.addIceCandidate(candidate);
         }
       });
     });
   };
 
   const acceptCall = async () => {
-    setIsCamVisible((prevVisibility) => !prevVisibility);
+    setIsComponentVisible((prevVisibility) => !prevVisibility);
+    setIsRemoteCamVisible((prevVisibility) => !prevVisibility);
+
+    setRemoteStream(new MediaStream());
+    console.log(remoteStream);
+    // Pull tracks from remote stream, add to video stream
+    pcRef.current.ontrack = (event) => {
+      event.streams[0].getTracks().forEach((track) => {
+        remoteStream.addTrack(track);
+        console.log(remoteMediaRef.current);
+        if (remoteMediaRef.current) {
+          remoteMediaRef.current.srcObject = remoteStream;
+          remoteMediaRef.current.play();
+        }
+      });
+    };
+
     // Answer the call with the unique ID
     const callsCollection = collection(firestore, "calls");
     // Create a query to get the latest offer document based on the 'timestamp' field
@@ -197,14 +255,14 @@ const App = () => {
         if (!querySnapshot.empty) {
           // Get the ID of the last offer document
           lastCallId = querySnapshot.docs[0].id;
-          console.log("ID of the last offer document:", lastCallId);
+          // console.log("ID of the last offer document:", lastCallId);
           // TODO: Completely change this temp Solution
           const callCollectionRef = collection(firestore, "calls");
           const callDoc = doc(callCollectionRef, lastCallId);
           const offerCandidates = collection(firestore, "offerCandidates");
           const answerCandidates = collection(firestore, "answerCandidates");
 
-          pc.onicecandidate = (event) => {
+          pcRef.current.onicecandidate = (event) => {
             event.candidate && answerCandidates.add(event.candidate.toJSON());
           };
 
@@ -212,12 +270,12 @@ const App = () => {
           const callData = callDataSnapshot.data();
 
           const offerDescription = callData.offer;
-          await pc.setRemoteDescription(
+          await pcRef.current.setRemoteDescription(
             new RTCSessionDescription(offerDescription)
           );
 
-          const answerDescription = await pc.createAnswer();
-          await pc.setLocalDescription(answerDescription);
+          const answerDescription = await pcRef.current.createAnswer();
+          await pcRef.current.setLocalDescription(answerDescription);
 
           const answer = {
             type: answerDescription.type,
@@ -231,7 +289,7 @@ const App = () => {
               console.log(change);
               if (change.type === "added") {
                 const candidate = new RTCIceCandidate(change.doc.data());
-                pc.addIceCandidate(candidate);
+                pcRef.current.addIceCandidate(candidate);
               }
             });
           });
@@ -246,20 +304,24 @@ const App = () => {
 
   // TODO Refactor
   const toggleCamVisibility = () => {
-    setIsCamVisible((prevVisibility) => !prevVisibility);
+    setIsLocaleCamVisible((prevVisibility) => !prevVisibility);
   };
 
   return (
     <div className="App">
       <header className="App-header">
-        {isCamVisible && <Video videoRef={localMediaRef}></Video>}
-        {isCamVisible && <Video videoRef={remoteMediaRef}></Video>}
+        <div style={{ display: "flex" }}>
+          {isLocaleCamVisible && <Video videoRef={localMediaRef}></Video>}
+          {isRemoteCamVisible && <Video videoRef={remoteMediaRef}></Video>}
+        </div>
         {isComponentVisible && (
           <div style={{ display: "flex" }}>
             <Button
-              color={!isCamVisible ? "#25D366" : "red"}
-              text={!isCamVisible ? "Включить камеру" : "Выключить камеру"}
-              clickHandler={!isCamVisible ? startWebcam : stopWebcam}
+              color={!isLocaleCamVisible ? "#25D366" : "red"}
+              text={
+                !isLocaleCamVisible ? "Включить камеру" : "Выключить камеру"
+              }
+              clickHandler={!isLocaleCamVisible ? startWebcam : stopWebcam}
               toggleVisibility={toggleCamVisibility}
             ></Button>
             <Button
