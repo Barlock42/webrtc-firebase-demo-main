@@ -21,12 +21,14 @@ import {
 } from "firebase/firestore";
 
 const App = () => {
-  const [localStream, setStream] = useState(null);
+  const [localStream, setLocalStream] = useState(null);
+  const [remoteStream, setRemoteStream] = useState(null);
   const [isComponentVisible, setIsComponentVisible] = useState(false);
   const [isCamVisible, setIsCamVisible] = useState(false);
   const [isMikeOn, setIsMikeOn] = useState(false);
   const [callId, setCallId] = useState(null);
-  const mediaRef = useRef(null);
+  const localMediaRef = useRef(null);
+  const remoteMediaRef = useRef(null);
 
   // Initialize Firebase with the provided firebaseConfig
   initializeApp(firebaseConfig);
@@ -53,14 +55,16 @@ const App = () => {
       });
       const videoTrack = mediaStream.getVideoTracks()[0];
 
+      // Push tracks from local stream to peer connection
       if (localStream !== null && localStream.getAudioTracks().length > 0) {
         localStream.addTrack(videoTrack);
+        pc.addTrack(videoTrack, localStream);
       } else {
-        setStream(mediaStream);
+        setLocalStream(mediaStream);
       }
 
-      if (mediaRef.current) {
-        mediaRef.current.srcObject = mediaStream;
+      if (localMediaRef.current) {
+        localMediaRef.current.srcObject = mediaStream;
       }
     } catch (error) {
       console.error("Ошибка доступа к камере:", error);
@@ -74,7 +78,7 @@ const App = () => {
         localStream.removeTrack(localStream.getVideoTracks()[0]);
       } else {
         localStream.getTracks().forEach((track) => track.stop());
-        setStream(null);
+        setLocalStream(null);
       }
     }
   };
@@ -90,11 +94,11 @@ const App = () => {
       if (localStream !== null && localStream.getVideoTracks().length > 0) {
         localStream.addTrack(audioTrack);
       } else {
-        setStream(mediaStream);
+        setLocalStream(mediaStream);
       }
-      if (mediaRef.current) {
-        mediaRef.current.srcObject = mediaStream;
-        mediaRef.current.play();
+      if (localMediaRef.current) {
+        localMediaRef.current.srcObject = mediaStream;
+        localMediaRef.current.play();
       }
     } catch (error) {
       console.error("Ошибка доступа к микрофону:", error);
@@ -108,13 +112,26 @@ const App = () => {
         localStream.removeTrack(localStream.getAudioTracks()[0]);
       } else {
         localStream.getTracks().forEach((track) => track.stop());
-        setStream(null);
+        setLocalStream(null);
       }
     }
   };
 
   const toggleVisibility = async () => {
     setIsComponentVisible((prevVisibility) => !prevVisibility);
+
+    setRemoteStream(new MediaStream());
+    // Pull tracks from remote stream, add to video stream
+    pc.ontrack = (event) => {
+      event.streams[0].getTracks().forEach((track) => {
+        remoteStream.addTrack(track);
+        // console.log(remoteMediaRef.current);
+        // if (remoteMediaRef.current) {
+        //   remoteMediaRef.current.srcObject = remoteStream;
+        //   remoteMediaRef.current.play();
+        // }
+      });
+    };
 
     // Reference Firestore collections for signaling
     const callCollection = collection(firestore, "calls");
@@ -235,7 +252,8 @@ const App = () => {
   return (
     <div className="App">
       <header className="App-header">
-        {isCamVisible && <Video videoRef={mediaRef}></Video>}
+        {isCamVisible && <Video videoRef={localMediaRef}></Video>}
+        {isCamVisible && <Video videoRef={remoteMediaRef}></Video>}
         {isComponentVisible && (
           <div style={{ display: "flex" }}>
             <Button
@@ -250,7 +268,7 @@ const App = () => {
               clickHandler={!isMikeOn ? startMike : stopMike}
               toggleVisibility={() => {}}
             ></Button>
-            {isMikeOn && <audio ref={mediaRef} autoPlay />}
+            {isMikeOn && <audio ref={localMediaRef} autoPlay />}
             <Button
               color={"red"}
               text={"Положить трубку"}
