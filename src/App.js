@@ -10,8 +10,14 @@ import {
     doc,
     collection,
     setDoc,
+    getDoc,
+    getDocs,
+    updateDoc,
     onSnapshot,
     serverTimestamp,
+    query,
+    orderBy,
+    limit
 } from "firebase/firestore";
 
 const servers = {
@@ -114,39 +120,68 @@ const App = () => {
         setIsAcceptingCall((prevVisibility) => !prevVisibility);
         setupWebRTC();
 
-        const callId = callInput.value;
-        const callDoc = firestore.collection('calls').doc(callId);
-        const answerCandidates = callDoc.collection('answerCandidates');
-        const offerCandidates = callDoc.collection('offerCandidates');
+        // Answer the call with the unique ID
+        const callsCollection = collection(firestore, "calls");
+        // Create a query to get the latest offer document based on the 'timestamp' field
+        const latestOfferQuery = query(
+            callsCollection,
+            orderBy("timestamp", "desc"),
+            limit(1)
+        );
 
-        pc.onicecandidate = (event) => {
-            event.candidate && answerCandidates.add(event.candidate.toJSON());
-        };
+        let lastCallId = null;
+        // Execute the query to get the latest document  
+        getDocs(latestOfferQuery)
+            .then(async (querySnapshot) => {
+                if (!querySnapshot.empty) {
+                    // Get the ID of the last offer document
+                    lastCallId = querySnapshot.docs[0].id;
+                    console.log("ID of the last offer document:", lastCallId);
+                    // TODO: Completely change this temp Solution
+                    const callId = lastCallId;
+                    const callCollectionRef = collection(firestore, "calls");
+                    const callDoc = doc(callCollectionRef, callId);
+                    const offerCandidates = collection(firestore, "offerCandidates");
+                    const answerCandidates = collection(firestore, "answerCandidates");
 
-        const callData = (await callDoc.get()).data();
+                    pcRef.current.onicecandidate = (event) => {
+                        event.candidate && answerCandidates.add(event.candidate.toJSON());
+                    };
 
-        const offerDescription = callData.offer;
-        await pc.setRemoteDescription(new RTCSessionDescription(offerDescription));
+                    const callDataSnapshot = await getDoc(callDoc);
+                    const callData = callDataSnapshot.data();
 
-        const answerDescription = await pc.createAnswer();
-        await pc.setLocalDescription(answerDescription);
+                    const offerDescription = callData.offer;
+                    await pcRef.current.setRemoteDescription(
+                        new RTCSessionDescription(offerDescription)
+                    );
 
-        const answer = {
-            type: answerDescription.type,
-            sdp: answerDescription.sdp,
-        };
+                    const answerDescription = await pcRef.current.createAnswer();
+                    await pcRef.current.setLocalDescription(answerDescription);
 
-        await callDoc.update({ answer });
+                    const answer = {
+                        type: answerDescription.type,
+                        sdp: answerDescription.sdp,
+                    };
 
-        offerCandidates.onSnapshot((snapshot) => {
-            snapshot.docChanges().forEach((change) => {
-                console.log(change);
-                if (change.type === 'added') {
-                    let data = change.doc.data();
-                    pc.addIceCandidate(new RTCIceCandidate(data));
+                    await updateDoc(callDoc, answer);
+
+                    onSnapshot(offerCandidates, (docSnapshot) => {
+                        docSnapshot.docChanges().forEach((change) => {
+                            console.log(change);
+                            if (change.type === "added") {
+                                const candidate = new RTCIceCandidate(change.doc.data());
+                                pcRef.current.addIceCandidate(candidate);
+                            }
+                        });
+                    });
+                } else {
+                    console.log("No offer documents found.");
                 }
+            })
+            .catch((error) => {
+                console.log("Error getting offer documents:", error);
             });
-        });
     }
 
     const startWebcam = async () => {
@@ -156,7 +191,7 @@ const App = () => {
     }
 
     const toggleCamVisibility = async () => {
-        
+
     }
 
     return (
