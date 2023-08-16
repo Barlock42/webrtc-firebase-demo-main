@@ -1,6 +1,8 @@
 import dbRef, { userName, connectorRef } from "./server/firebase";
 import "./App.css";
 import { useEffect } from "react";
+import { connect } from "react-redux"
+import { setUser, addParticipant, removeParticipant } from "./store/actionCreator";
 
 const App = () => {
     const participantRef = dbRef.child("participants");
@@ -21,16 +23,16 @@ const App = () => {
                 userRef.onDisconnect().remove();
             }
         };
-    
+
         connectorRef.on('value', handleValueChange);
-    
+
         return () => {
             // Clean up the event listener and onDisconnect
             connectorRef.off('value', handleValueChange);
             participantRef.off('value'); // Clean up other listeners if needed
         };
     }, [participantRef]);
-    
+
 
     return (
         <div className="App">
@@ -39,4 +41,16 @@ const App = () => {
         </div>);
 }
 
-export default App;
+const mapStateToProps = (state) => {
+    return {
+        user: state.currentUser
+    }
+}
+
+const mapDispatchToProps = (dispatch) => {
+    return {
+        setUser: (user) => dispatch(setUser(user))
+    }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(App);
