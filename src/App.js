@@ -43,13 +43,16 @@ const App = () => {
 
 const mapStateToProps = (state) => {
     return {
-        user: state.currentUser
+        user: state.currentUser,
+        participants: state.participants
     }
 }
 
 const mapDispatchToProps = (dispatch) => {
     return {
-        setUser: (user) => dispatch(setUser(user))
+        setUser: (user) => dispatch(setUser(user)),
+        addParticipant: (participant) => dispatch(addParticipant(participant)),
+        removeParticipant: (participantKey) => dispatch(setUser(participantKey))
     }
 }
 
