@@ -3,6 +3,7 @@ import "./App.css";
 import { useEffect } from "react";
 import { connect } from "react-redux"
 import { setUser, addParticipant, removeParticipant } from "./store/actionCreator";
+import { MainScreen } from "./components/MainScreen/MainScreen.js";
 
 const App = (props) => {
     const participantRef = dbRef.child("participants");
@@ -56,8 +57,7 @@ const App = (props) => {
         <div className="App">
             <header className="App-header"></header>
             <div>
-            {props.user}
-            {props.participants}
+                <MainScreen/ >
             </div>
         </div>);
 }
