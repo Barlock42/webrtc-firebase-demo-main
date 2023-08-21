@@ -5,6 +5,9 @@ const initialState = {
   participants: {}
 };
 
+const generateColor = () =>
+  "#" + Math.floor(Math.random() * 16777215).toString(16);
+
 export const userReducer = (state = initialState, action) => {
   switch (action.type) {
     case SET_USER: {
@@ -24,6 +27,7 @@ export const userReducer = (state = initialState, action) => {
 
       if (currentUserId === participantId) {
         updatedParticipant.currentUser = true;
+        payload.newUser[participantId].avatarColor = generateColor();
       }
 
       return {
