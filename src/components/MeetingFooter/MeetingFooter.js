@@ -12,7 +12,7 @@ const MeetingFooter = () => {
             <FontAwesomeIcon icon={faVideo} />
         </div>
         <div className="meetingIcon">
-        <FontAwesomeIcon icon={faDesktop} />
+            <FontAwesomeIcon icon={faDesktop} />
         </div>
     </div>)
 }
