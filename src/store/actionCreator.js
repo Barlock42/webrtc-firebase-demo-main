@@ -2,7 +2,7 @@ import {
     ADD_PARTICIPANT,
     SET_USER,
     REMOVE_PARTICIPANT
-} from "./actiontypes";
+} from "./actionTypes";
 
 export const setUser = (user) => {
     return {

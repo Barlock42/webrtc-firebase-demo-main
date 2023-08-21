@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { connect } from "react-redux"
 import { setUser, addParticipant, removeParticipant } from "./store/actionCreator";
 
-const App = () => {
+const App = (props) => {
     const participantRef = dbRef.child("participants");
 
     // 1.) Component mounts -› effect runs -> creates listener
@@ -13,13 +13,16 @@ const App = () => {
     useEffect(() => {
         const handleValueChange = (snap) => {
             if (snap.val()) {
-                const defaultPreference = {
+                const defaultPreferences = {
                     audio: true,
                     video: false,
                     screen: false,
                 };
                 // console.log("pushing")
-                const userRef = participantRef.push({ userName, preferences: defaultPreference });
+                const userRef = participantRef.push({ userName, preferences: defaultPreferences });
+                props.setUser({
+                    [userRef.key]: { userName, ...defaultPreferences }
+                });
                 userRef.onDisconnect().remove();
             }
         };
@@ -33,11 +36,29 @@ const App = () => {
         };
     }, [participantRef]);
 
+    useEffect(() => {
+        if (props.user) {
+            participantRef.on("child_added", handleChildAdded)
+            participantRef.on("child_removed", handleChildRemoved);
+        }
+
+        const handleChildAdded = (snap) => {
+            const { userName, preferences } = snap.val();
+            props.addParticipant({ [snap.key]: { userName, ...preferences } });
+        };
+
+        const handleChildRemoved = (snap) => {
+            props.removeParticipant([snap.key]);
+        };
+    }, [props.user]);
 
     return (
         <div className="App">
             <header className="App-header"></header>
-            <div>{userName}</div>
+            <div>
+            {props.user}
+            {props.participants}
+            </div>
         </div>);
 }
 

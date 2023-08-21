@@ -6,7 +6,7 @@ firebase.initializeApp(firebaseConfig);
 let dbRef = firebase.database().ref();
 export const connectorRef = firebase.database().ref(".info/connected");
 
-export const userName = "test"; // Get it from outer application
+export const userName = prompt("Name:"); // "test"; // Get it from outer application
 const urlParams = new URLSearchParams(window.location.search);
 const roomId = urlParams.get("id");
 
